@@ -1,6 +1,7 @@
-use aiken/builtin.{blake2b_256, serialise_data}
-use aiken/list
-use aiken/transaction.{InlineDatum, NoDatum, ScriptContext, Spend, Transaction}
+use aiken/builtin.{serialise_data}
+use aiken/collection/list
+use aiken/crypto.{blake2b_256}
+use cardano/transaction.{InlineDatum, NoDatum, OutputReference, Transaction}
 use jpg/constants
 use jpg/types.{Payout, VerificationKeyHash}
 use jpg/utils.{check_marketplace_payout, check_payouts, find_payout_outputs}
@@ -10,7 +11,7 @@ use jpg/utils.{check_marketplace_payout, check_payouts, find_payout_outputs}
 /// We do not need to specify the marketplace payout
 /// in `payouts` even though it will be in
 /// one of the outputs.
-type Datum {
+pub type Datum {
   /// Does not contain the marketplace payout.
   /// This is usually royalty and seller payouts.
   payouts: List<Payout>,
@@ -21,7 +22,7 @@ type Datum {
 
 /// A user can either buy a token
 /// or cancel/update the listing.
-type Redeemer {
+pub type Redeemer {
   /// `payout_outputs_offset` tells us where
   /// the outputs containing the payouts start.
   Buy { payout_outputs_offset: Int }
@@ -29,27 +30,28 @@ type Redeemer {
   WithdrawOrUpdate
 }
 
-validator {
+validator ask {
   /// Validate that the signer is the owner or that payouts
   /// are present as outputs and that the tag is correct.
-  fn spend(datum: Datum, redeemer: Redeemer, ctx: ScriptContext) -> Bool {
-    let ScriptContext { transaction, purpose } = ctx
-
-    let Transaction { outputs, extra_signatories, .. } = transaction
+  spend(
+    datum: Option<Datum>,
+    redeemer: Redeemer,
+    input: OutputReference,
+    tx: Transaction,
+  ) {
+    let Transaction { outputs, extra_signatories, .. } = tx
 
     // Match on the action.
     when redeemer is {
       Buy { payout_outputs_offset } -> {
-        expect Spend(out_ref) = purpose
-
         // for double satisfaction
         let datum_tag =
-          out_ref
+          input
             |> serialise_data
             |> blake2b_256
             |> InlineDatum
 
-        let Datum { payouts, .. } = datum
+        expect Some(Datum { payouts, .. }) = datum
 
         // Find the `outputs` that correspond to `payouts`.
         let payout_outputs = find_payout_outputs(outputs, payout_outputs_offset)
@@ -88,9 +90,16 @@ validator {
       // There's not much to do here. An asset
       // owner can cancel or update their listing
       // at any time.
-      WithdrawOrUpdate ->
+      WithdrawOrUpdate -> {
+        expect Some(Datum { owner, .. }) = datum
+
         // is signed by owner
-        list.has(extra_signatories, datum.owner)
+        list.has(extra_signatories, owner)
+      }
     }
+  }
+
+  else(_) {
+    fail
   }
 }

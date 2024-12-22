@@ -1,5 +1,5 @@
-use aiken/hash.{Blake2b_224, Hash}
-use aiken/transaction/credential.{Address, Script, VerificationKey}
+use aiken/crypto.{Blake2b_224, Hash, Script, VerificationKey}
+use cardano/address.{Address}
 
 pub type ScriptHash =
   Hash<Blake2b_224, Script>

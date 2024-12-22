@@ -1,11 +1,9 @@
 use aiken/builtin.{tail_list}
-use aiken/dict
-use aiken/list
-use aiken/transaction.{
-  Datum, InlineDatum, NoDatum, Output, OutputReference, TransactionId,
-}
-use aiken/transaction/credential.{Address, VerificationKeyCredential}
-use aiken/transaction/value.{ada_policy_id, to_dict}
+use aiken/collection/dict
+use aiken/collection/list
+use cardano/address.{Address, VerificationKey}
+use cardano/assets.{ada_policy_id, from_lovelace, to_dict}
+use cardano/transaction.{Datum, InlineDatum, NoDatum, Output, OutputReference}
 use jpg/constants.{marketplace_addr}
 use jpg/types.{Payout}
 
@@ -90,12 +88,12 @@ pub fn check_marketplace_payout(
   // Match hardcoded marketplace address
   let address_check = output_address == marketplace_addr()
 
-  expect [(policy, tokens)] =
+  expect [Pair(policy, tokens)] =
     value
       |> to_dict
-      |> dict.to_list
+      |> dict.to_pairs
 
-  expect [(_, quantity)] = dict.to_list(tokens)
+  expect [Pair(_, quantity)] = dict.to_pairs(tokens)
 
   let policy_check = policy == ada_policy_id
 
@@ -113,10 +111,7 @@ pub fn check_marketplace_payout(
 /// a value greater than or equal to the marketplace fee.
 test check_marketplace_payout_valid_input() {
   let datum_tag =
-    OutputReference {
-      transaction_id: TransactionId { hash: #"00" },
-      output_index: 0,
-    }
+    OutputReference { transaction_id: #"00", output_index: 0 }
       |> builtin.serialise_data
       |> builtin.blake2b_256
       |> InlineDatum
@@ -124,7 +119,7 @@ test check_marketplace_payout_valid_input() {
   let output =
     Output {
       address: marketplace_addr(),
-      value: value.from_lovelace(2000000),
+      value: from_lovelace(2000000),
       datum: datum_tag,
       reference_script: None,
     }
@@ -138,10 +133,7 @@ test check_marketplace_payout_valid_input() {
 /// `check_marketplace_payout` will return `False`.
 test check_marketplace_payout_invalid_address() {
   let datum_tag =
-    OutputReference {
-      transaction_id: TransactionId { hash: #"00" },
-      output_index: 0,
-    }
+    OutputReference { transaction_id: #"00", output_index: 0 }
       |> builtin.serialise_data
       |> builtin.blake2b_256
       |> InlineDatum
@@ -150,12 +142,12 @@ test check_marketplace_payout_invalid_address() {
     Output {
       // anything but the marketplace address
       address: Address {
-        payment_credential: VerificationKeyCredential(
+        payment_credential: VerificationKey(
           #"fff60f3b5ea7153e0acc7a803e4401d44b8ed1bae1c7baaad1a62a81",
         ),
         stake_credential: None,
       },
-      value: value.from_lovelace(2000000),
+      value: from_lovelace(2000000),
       datum: datum_tag,
       reference_script: None,
     }
@@ -169,10 +161,7 @@ test check_marketplace_payout_invalid_address() {
 /// in the datum `check_marketplace_payout` will return `False`.
 test check_marketplace_payout_incorrect_amount() {
   let datum_tag =
-    OutputReference {
-      transaction_id: TransactionId { hash: #"00" },
-      output_index: 0,
-    }
+    OutputReference { transaction_id: #"00", output_index: 0 }
       |> builtin.serialise_data
       |> builtin.blake2b_256
       |> InlineDatum
@@ -181,7 +170,7 @@ test check_marketplace_payout_incorrect_amount() {
     Output {
       // anything but the marketplace address
       address: marketplace_addr(),
-      value: value.from_lovelace(1000000),
+      value: from_lovelace(1000000),
       datum: datum_tag,
       reference_script: None,
     }
@@ -213,12 +202,12 @@ pub fn check_payouts(
   // the address specified in the corresponding
   // payout from the datum.
   expect payout_address == output_address
-  expect [(policy, tokens)] =
+  expect [Pair(policy, tokens)] =
     value
       |> to_dict
-      |> dict.to_list
+      |> dict.to_pairs
 
-  expect [(_, quantity)] = dict.to_list(tokens)
+  expect [Pair(_, quantity)] = dict.to_pairs(tokens)
 
   expect policy == ada_policy_id
   // The quantity in the output must equal
@@ -253,12 +242,12 @@ pub fn check_payouts_aux(outputs: List<Output>, payouts: List<Payout>) -> Int {
   // the address specified in the corresponding
   // payout from the datum.
   expect payout_address == output_address
-  expect [(policy, tokens)] =
+  expect [Pair(policy, tokens)] =
     value
       |> to_dict
-      |> dict.to_list
+      |> dict.to_pairs
 
-  expect [(_, quantity)] = dict.to_list(tokens)
+  expect [Pair(_, quantity)] = dict.to_pairs(tokens)
 
   expect policy == ada_policy_id
   // The quantity in the output must equal
@@ -285,7 +274,7 @@ pub fn check_payouts_aux(outputs: List<Output>, payouts: List<Payout>) -> Int {
 test check_payouts_with_trailing_outputs() {
   let test_royalty_addr =
     Address {
-      payment_credential: VerificationKeyCredential(
+      payment_credential: VerificationKey(
         #"80f60f3b5ea7153e0acc7a803e4401d44b8ed1bae1c7baaad1a62a81",
       ),
       stake_credential: None,
@@ -293,7 +282,7 @@ test check_payouts_with_trailing_outputs() {
 
   let test_seller_addr =
     Address {
-      payment_credential: VerificationKeyCredential(
+      payment_credential: VerificationKey(
         #"90f60f3b5ea7153e0acc7a803e4401d44b8ed1bae1c7baaad1a62a81",
       ),
       stake_credential: None,
@@ -301,7 +290,7 @@ test check_payouts_with_trailing_outputs() {
 
   let test_random_addr =
     Address {
-      payment_credential: VerificationKeyCredential(
+      payment_credential: VerificationKey(
         #"fff60f3b5ea7153e0acc7a803e4401d44b8ed1bae1c7baaad1a62a81",
       ),
       stake_credential: None,
@@ -314,10 +303,7 @@ test check_payouts_with_trailing_outputs() {
     ]
 
   let datum_tag =
-    OutputReference {
-      transaction_id: TransactionId { hash: #"00" },
-      output_index: 0,
-    }
+    OutputReference { transaction_id: #"00", output_index: 0 }
       |> builtin.serialise_data
       |> builtin.blake2b_256
       |> InlineDatum
@@ -325,7 +311,7 @@ test check_payouts_with_trailing_outputs() {
   let out_1 =
     Output {
       address: test_royalty_addr,
-      value: value.from_lovelace(3100000),
+      value: from_lovelace(3100000),
       datum: datum_tag,
       reference_script: None,
     }
@@ -333,7 +319,7 @@ test check_payouts_with_trailing_outputs() {
   let out_2 =
     Output {
       address: test_seller_addr,
-      value: value.from_lovelace(95000000),
+      value: from_lovelace(95000000),
       datum: NoDatum,
       reference_script: None,
     }
@@ -341,7 +327,7 @@ test check_payouts_with_trailing_outputs() {
   let out_random =
     Output {
       address: test_random_addr,
-      value: value.from_lovelace(1000000),
+      value: from_lovelace(1000000),
       datum: datum_tag,
       reference_script: None,
     }
@@ -357,7 +343,7 @@ test check_payouts_with_trailing_outputs() {
 test check_payouts_with_mixed_outputs() fail {
   let test_royalty_addr =
     Address {
-      payment_credential: VerificationKeyCredential(
+      payment_credential: VerificationKey(
         #"80f60f3b5ea7153e0acc7a803e4401d44b8ed1bae1c7baaad1a62a81",
       ),
       stake_credential: None,
@@ -365,7 +351,7 @@ test check_payouts_with_mixed_outputs() fail {
 
   let test_seller_addr =
     Address {
-      payment_credential: VerificationKeyCredential(
+      payment_credential: VerificationKey(
         #"90f60f3b5ea7153e0acc7a803e4401d44b8ed1bae1c7baaad1a62a81",
       ),
       stake_credential: None,
@@ -373,7 +359,7 @@ test check_payouts_with_mixed_outputs() fail {
 
   let test_random_addr =
     Address {
-      payment_credential: VerificationKeyCredential(
+      payment_credential: VerificationKey(
         #"fff60f3b5ea7153e0acc7a803e4401d44b8ed1bae1c7baaad1a62a81",
       ),
       stake_credential: None,
@@ -386,10 +372,7 @@ test check_payouts_with_mixed_outputs() fail {
     ]
 
   let datum_tag =
-    OutputReference {
-      transaction_id: TransactionId { hash: #"00" },
-      output_index: 0,
-    }
+    OutputReference { transaction_id: #"00", output_index: 0 }
       |> builtin.serialise_data
       |> builtin.blake2b_256
       |> InlineDatum
@@ -397,7 +380,7 @@ test check_payouts_with_mixed_outputs() fail {
   let out_1 =
     Output {
       address: test_royalty_addr,
-      value: value.from_lovelace(3000000),
+      value: from_lovelace(3000000),
       datum: datum_tag,
       reference_script: None,
     }
@@ -405,7 +388,7 @@ test check_payouts_with_mixed_outputs() fail {
   let out_2 =
     Output {
       address: test_seller_addr,
-      value: value.from_lovelace(95000000),
+      value: from_lovelace(95000000),
       datum: NoDatum,
       reference_script: None,
     }
@@ -413,7 +396,7 @@ test check_payouts_with_mixed_outputs() fail {
   let out_random =
     Output {
       address: test_random_addr,
-      value: value.from_lovelace(1000000),
+      value: from_lovelace(1000000),
       datum: NoDatum,
       reference_script: None,
     }
@@ -432,7 +415,7 @@ test check_payouts_with_mixed_outputs() fail {
 test check_payouts_with_leading_outputs() fail {
   let test_royalty_addr =
     Address {
-      payment_credential: VerificationKeyCredential(
+      payment_credential: VerificationKey(
         #"80f60f3b5ea7153e0acc7a803e4401d44b8ed1bae1c7baaad1a62a81",
       ),
       stake_credential: None,
@@ -440,7 +423,7 @@ test check_payouts_with_leading_outputs() fail {
 
   let test_seller_addr =
     Address {
-      payment_credential: VerificationKeyCredential(
+      payment_credential: VerificationKey(
         #"90f60f3b5ea7153e0acc7a803e4401d44b8ed1bae1c7baaad1a62a81",
       ),
       stake_credential: None,
@@ -448,7 +431,7 @@ test check_payouts_with_leading_outputs() fail {
 
   let test_random_addr =
     Address {
-      payment_credential: VerificationKeyCredential(
+      payment_credential: VerificationKey(
         #"fff60f3b5ea7153e0acc7a803e4401d44b8ed1bae1c7baaad1a62a81",
       ),
       stake_credential: None,
@@ -461,10 +444,7 @@ test check_payouts_with_leading_outputs() fail {
     ]
 
   let datum_tag =
-    OutputReference {
-      transaction_id: TransactionId { hash: #"00" },
-      output_index: 0,
-    }
+    OutputReference { transaction_id: #"00", output_index: 0 }
       |> builtin.serialise_data
       |> builtin.blake2b_256
       |> InlineDatum
@@ -472,7 +452,7 @@ test check_payouts_with_leading_outputs() fail {
   let out_1 =
     Output {
       address: test_royalty_addr,
-      value: value.from_lovelace(3000000),
+      value: from_lovelace(3000000),
       datum: datum_tag,
       reference_script: None,
     }
@@ -480,7 +460,7 @@ test check_payouts_with_leading_outputs() fail {
   let out_2 =
     Output {
       address: test_seller_addr,
-      value: value.from_lovelace(95000000),
+      value: from_lovelace(95000000),
       datum: NoDatum,
       reference_script: None,
     }
@@ -488,7 +468,7 @@ test check_payouts_with_leading_outputs() fail {
   let out_random =
     Output {
       address: test_random_addr,
-      value: value.from_lovelace(1000000),
+      value: from_lovelace(1000000),
       datum: NoDatum,
       reference_script: None,
     }
@@ -503,7 +483,7 @@ test check_payouts_with_leading_outputs() fail {
 test check_payouts_with_wrong_amounts() fail {
   let test_royalty_addr =
     Address {
-      payment_credential: VerificationKeyCredential(
+      payment_credential: VerificationKey(
         #"80f60f3b5ea7153e0acc7a803e4401d44b8ed1bae1c7baaad1a62a81",
       ),
       stake_credential: None,
@@ -511,7 +491,7 @@ test check_payouts_with_wrong_amounts() fail {
 
   let test_seller_addr =
     Address {
-      payment_credential: VerificationKeyCredential(
+      payment_credential: VerificationKey(
         #"90f60f3b5ea7153e0acc7a803e4401d44b8ed1bae1c7baaad1a62a81",
       ),
       stake_credential: None,
@@ -519,7 +499,7 @@ test check_payouts_with_wrong_amounts() fail {
 
   let test_random_addr =
     Address {
-      payment_credential: VerificationKeyCredential(
+      payment_credential: VerificationKey(
         #"fff60f3b5ea7153e0acc7a803e4401d44b8ed1bae1c7baaad1a62a81",
       ),
       stake_credential: None,
@@ -532,10 +512,7 @@ test check_payouts_with_wrong_amounts() fail {
     ]
 
   let datum_tag =
-    OutputReference {
-      transaction_id: TransactionId { hash: #"00" },
-      output_index: 0,
-    }
+    OutputReference { transaction_id: #"00", output_index: 0 }
       |> builtin.serialise_data
       |> builtin.blake2b_256
       |> InlineDatum
@@ -543,7 +520,7 @@ test check_payouts_with_wrong_amounts() fail {
   let out_1 =
     Output {
       address: test_royalty_addr,
-      value: value.from_lovelace(3000000),
+      value: from_lovelace(3000000),
       datum: datum_tag,
       reference_script: None,
     }
@@ -551,7 +528,7 @@ test check_payouts_with_wrong_amounts() fail {
   let out_2 =
     Output {
       address: test_seller_addr,
-      value: value.from_lovelace(85000000),
+      value: from_lovelace(85000000),
       datum: NoDatum,
       reference_script: None,
     }
@@ -559,7 +536,7 @@ test check_payouts_with_wrong_amounts() fail {
   let out_random =
     Output {
       address: test_random_addr,
-      value: value.from_lovelace(1000000),
+      value: from_lovelace(1000000),
       datum: NoDatum,
       reference_script: None,
     }
@@ -574,7 +551,7 @@ test check_payouts_with_wrong_amounts() fail {
 test check_payouts_with_wrong_address() fail {
   let test_royalty_addr =
     Address {
-      payment_credential: VerificationKeyCredential(
+      payment_credential: VerificationKey(
         #"80f60f3b5ea7153e0acc7a803e4401d44b8ed1bae1c7baaad1a62a81",
       ),
       stake_credential: None,
@@ -582,7 +559,7 @@ test check_payouts_with_wrong_address() fail {
 
   let test_seller_addr =
     Address {
-      payment_credential: VerificationKeyCredential(
+      payment_credential: VerificationKey(
         #"90f60f3b5ea7153e0acc7a803e4401d44b8ed1bae1c7baaad1a62a81",
       ),
       stake_credential: None,
@@ -590,7 +567,7 @@ test check_payouts_with_wrong_address() fail {
 
   let test_random_addr =
     Address {
-      payment_credential: VerificationKeyCredential(
+      payment_credential: VerificationKey(
         #"fff60f3b5ea7153e0acc7a803e4401d44b8ed1bae1c7baaad1a62a81",
       ),
       stake_credential: None,
@@ -603,10 +580,7 @@ test check_payouts_with_wrong_address() fail {
     ]
 
   let datum_tag =
-    OutputReference {
-      transaction_id: TransactionId { hash: #"00" },
-      output_index: 0,
-    }
+    OutputReference { transaction_id: #"00", output_index: 0 }
       |> builtin.serialise_data
       |> builtin.blake2b_256
       |> InlineDatum
@@ -614,12 +588,12 @@ test check_payouts_with_wrong_address() fail {
   let out_1 =
     Output {
       address: Address {
-        payment_credential: VerificationKeyCredential(
+        payment_credential: VerificationKey(
           #"fff60f3b5ea7153e0acc7a803e4401d44b8ed1bae1c7baaad1a62a81",
         ),
         stake_credential: None,
       },
-      value: value.from_lovelace(3000000),
+      value: from_lovelace(3000000),
       datum: datum_tag,
       reference_script: None,
     }
@@ -627,7 +601,7 @@ test check_payouts_with_wrong_address() fail {
   let out_2 =
     Output {
       address: test_seller_addr,
-      value: value.from_lovelace(95000000),
+      value: from_lovelace(95000000),
       datum: NoDatum,
       reference_script: None,
     }
@@ -635,7 +609,7 @@ test check_payouts_with_wrong_address() fail {
   let out_random =
     Output {
       address: test_random_addr,
-      value: value.from_lovelace(1000000),
+      value: from_lovelace(1000000),
       datum: datum_tag,
       reference_script: None,
     }
@@ -649,7 +623,7 @@ test check_payouts_with_wrong_address() fail {
 test check_payouts_with_single_payout() {
   let test_royalty_addr =
     Address {
-      payment_credential: VerificationKeyCredential(
+      payment_credential: VerificationKey(
         #"80f60f3b5ea7153e0acc7a803e4401d44b8ed1bae1c7baaad1a62a81",
       ),
       stake_credential: None,
@@ -657,7 +631,7 @@ test check_payouts_with_single_payout() {
 
   let test_random_addr =
     Address {
-      payment_credential: VerificationKeyCredential(
+      payment_credential: VerificationKey(
         #"fff60f3b5ea7153e0acc7a803e4401d44b8ed1bae1c7baaad1a62a81",
       ),
       stake_credential: None,
@@ -667,10 +641,7 @@ test check_payouts_with_single_payout() {
     [Payout { address: test_royalty_addr, amount_lovelace: 3000000 }]
 
   let datum_tag =
-    OutputReference {
-      transaction_id: TransactionId { hash: #"00" },
-      output_index: 0,
-    }
+    OutputReference { transaction_id: #"00", output_index: 0 }
       |> builtin.serialise_data
       |> builtin.blake2b_256
       |> InlineDatum
@@ -678,7 +649,7 @@ test check_payouts_with_single_payout() {
   let out_1 =
     Output {
       address: test_royalty_addr,
-      value: value.from_lovelace(3000000),
+      value: from_lovelace(3000000),
       datum: datum_tag,
       reference_script: None,
     }
@@ -686,7 +657,7 @@ test check_payouts_with_single_payout() {
   let out_random =
     Output {
       address: test_random_addr,
-      value: value.from_lovelace(1000000),
+      value: from_lovelace(1000000),
       datum: NoDatum,
       reference_script: None,
     }

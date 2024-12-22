@@ -1,4 +1,4 @@
-use aiken/transaction/credential.{Address, Inline, ScriptCredential}
+use cardano/address.{Address, Inline, Script}
 use jpg/types.{ScriptHash, VerificationKeyHash}
 
 pub const marketplace_stake_sh: ScriptHash =
@@ -9,8 +9,8 @@ pub const marketplace_sh: ScriptHash =
 
 pub fn marketplace_addr() -> Address {
   Address {
-    payment_credential: ScriptCredential(marketplace_sh),
-    stake_credential: Some(Inline(ScriptCredential(marketplace_stake_sh))),
+    payment_credential: Script(marketplace_sh),
+    stake_credential: Some(Inline(Script(marketplace_stake_sh))),
   }
 }
 
@@ -23,4 +23,4 @@ pub fn authorizers() -> List<VerificationKeyHash> {
 
 pub const marketplace_pct: Int = 20
 
-pub const min_payout: Int = 1000000
+pub const min_payout: Int = 1_000_000
