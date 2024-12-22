@@ -12,9 +12,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: aiken-lang/setup-aiken@v0.1.0
+      - uses: aiken-lang/setup-aiken@v1
         with:
-          version: v1.0.13-alpha
+          version: v1.0.28-alpha
 
       - run: aiken fmt --check
       - run: aiken check
